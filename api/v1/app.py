@@ -1,4 +1,8 @@
-# api/v1/app.py
+#!/usr/bin/python3
+"""
+app.py to run the Flask
+"""
+
 from flask import Flask
 from os import getenv
 from flask import Flask, jsonify
@@ -12,7 +16,14 @@ app = Flask(__name__)
 def teardown_appcontext(exception):
     storage.close()
 
-@app_views.route('/api/v1/stats', methods=['GET'])
+
+@app_views.route('/status', methods=['GET'])
+def get_status():
+    """Get status"""
+    return jsonify({"status": "OK"})
+
+
+@app_views.route('/stats', methods=['GET'])
 def get_stats():
     """Get statistics about the number of objects by type"""
     stats = {
@@ -25,13 +36,14 @@ def get_stats():
     }
     return jsonify(stats)
 
+
 @app.errorhandler(404)
 def not_found(error):
     """Handler for 404 errors"""
     return jsonify({"error": "Not found"}), 404
 
-app.register_blueprint(app_views)
 
+app.register_blueprint(app_views)
 
 if __name__ == "__main__":
     host = getenv('HBNB_API_HOST', '0.0.0.0')
