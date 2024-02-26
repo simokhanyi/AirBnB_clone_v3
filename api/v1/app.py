@@ -4,14 +4,14 @@
 from flask import Flask, jsonify, request
 from os import getenv
 from models import storage
+from flask_cors import CORS
 from api.v1.views import app_views
 from models.state import State
 from datetime import datetime, timedelta
 
 app = Flask(__name__)
-
-# Register the blueprint
-app.register_blueprint(app_views)
+CORS(app, resources={r"/api/v1/*": {"origins": "0.0.0.0"}})
+app.register_blueprint(app_views, url_prefix="/api/v1")
 
 
 @app.teardown_appcontext
@@ -19,7 +19,7 @@ def teardown_appcontext(exception):
     storage.close()
 
 
-@app.route('/status', methods=['GET'])
+@app.route('/api/v1/status', methods=['GET'])
 def get_status():
     """Get status"""
     return jsonify({"status": "OK"})

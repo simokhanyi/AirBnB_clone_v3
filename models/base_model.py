@@ -73,3 +73,22 @@ class BaseModel:
     def delete(self):
         """delete the current instance from the storage"""
         models.storage.delete(self)
+
+
+class User(BaseModel):
+    """User class"""
+
+    def __init__(self, *args, **kwargs):
+        """Initialization method"""
+        super().__init__(*args, **kwargs)
+        if 'password' in kwargs:
+            self.password = (
+                hashlib.md5(kwargs['password'].encode())
+                .hexdigest()
+            )
+
+    def update_password(self, new_password):
+        """Update password method"""
+        self.password = (
+            hashlib.md5(new_password.encode()).hexdigest()
+        )
