@@ -6,15 +6,21 @@ Contains the TestReviewDocs classes
 from datetime import datetime
 import inspect
 import models
-from models import review
+from models import review, place, user
 from models.base_model import BaseModel
 import pep8
 import unittest
+from api.v1.views import app_views
+from flask import jsonify, abort, request
+
 Review = review.Review
+Place = place.Place
+User = user.User
 
 
 class TestReviewDocs(unittest.TestCase):
     """Tests to check the documentation and style of Review class"""
+
     @classmethod
     def setUpClass(cls):
         """Set up for the doc tests"""
@@ -59,6 +65,7 @@ class TestReviewDocs(unittest.TestCase):
 
 class TestReview(unittest.TestCase):
     """Test the Review class"""
+
     def test_is_subclass(self):
         """Test if Review is a subclass of BaseModel"""
         review = Review()
@@ -121,3 +128,123 @@ class TestReview(unittest.TestCase):
         review = Review()
         string = "[Review] ({}) {}".format(review.id, review.__dict__)
         self.assertEqual(string, str(review))
+
+
+class TestReviewAPI(unittest.TestCase):
+    """Tests for Review API endpoints"""
+
+    def test_get_reviews(self):
+        """Test retrieving list of reviews of a place"""
+        # Create a place and a review
+        place = Place()
+        review = Review()
+        place.reviews.append(review)
+        storage.new(place)
+        storage.new(review)
+        storage.save()
+
+        # Request the reviews of the place
+        response = app_views.test_client().get(f'/places/{place.id}/reviews')
+
+        # Check if status code is 200
+        self.assertEqual(response.status_code, 200)
+
+        # Check if the response contains the review
+        data = response.json
+        self.assertTrue(isinstance(data, list))
+        self.assertEqual(len(data), 1)
+        self.assertEqual(data[0]['id'], review.id)
+
+    def test_get_review(self):
+        """Test retrieving a review"""
+        # Create a review
+        review = Review()
+        storage.new(review)
+        storage.save()
+
+        # Request the review
+        response = app_views.test_client().get(f'/reviews/{review.id}')
+
+        # Check if status code is 200
+        self.assertEqual(response.status_code, 200)
+
+        # Check if the response contains the review
+        data = response.json
+        self.assertEqual(data['id'], review.id)
+
+    def test_delete_review(self):
+        """Test deleting a review"""
+        # Create a review
+        review = Review()
+        storage.new(review)
+        storage.save()
+
+        # Delete the review
+        response = app_views.test_client().delete(f'/reviews/{review.id}')
+
+        # Check if status code is 200
+        self.assertEqual(response.status_code, 200)
+
+        # Check if the review is deleted
+        deleted_review = storage.get(Review, review.id)
+        self.assertIsNone(deleted_review)
+
+    def test_create_review(self):
+        """Test creating a review"""
+        # Create a user and a place
+        user = User()
+        place = Place()
+        storage.new(user)
+        storage.new(place)
+        storage.save()
+
+        # Create review data
+        review_data = {
+            'user_id': user.id,
+            'text': 'Great place!'
+        }
+
+        # Create the review
+        response =(
+            app_views.test_client()
+            .post(f'/places/{place.id}/reviews', json=review_data)
+        )
+
+        # Check if status code is 201
+        self.assertEqual(response.status_code, 201)
+
+        # Check if the review is created
+        data = response.json
+        created_review = storage.get(Review, data['id'])
+        self.assertIsNotNone(created_review)
+        self.assertEqual(created_review.user_id, user.id)
+        self.assertEqual(created_review.text, 'Great place!')
+
+    def test_update_review(self):
+        """Test updating a review"""
+        # Create a review
+        review = Review()
+        storage.new(review)
+        storage.save()
+
+        # Update review data
+        updated_data = {
+            'text': 'Updated review!'
+        }
+
+        # Update the review
+        response = (
+            app_views.test_client()
+            .put(f'/reviews/{review.id}', json=updated_data)
+        )
+
+        # Check if status code is 200
+        self.assertEqual(response.status_code, 200)
+
+        # Check if the review is updated
+        updated_review = storage.get(Review, review.id)
+        self.assertEqual(updated_review.text, 'Updated review!')
+
+
+if __name__ == '__main__':
+    unittest.main()

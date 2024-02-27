@@ -6,15 +6,20 @@ Contains the TestAmenityDocs classes
 from datetime import datetime
 import inspect
 import models
-from models import amenity
+from models import amenity, place
 from models.base_model import BaseModel
 import pep8
 import unittest
+from api.v1.views import app_views
+from flask import jsonify, abort, request
+
 Amenity = amenity.Amenity
+Place = place.Place
 
 
 class TestAmenityDocs(unittest.TestCase):
     """Tests to check the documentation and style of Amenity class"""
+
     @classmethod
     def setUpClass(cls):
         """Set up for the doc tests"""
@@ -59,6 +64,7 @@ class TestAmenityDocs(unittest.TestCase):
 
 class TestAmenity(unittest.TestCase):
     """Test the Amenity class"""
+
     def test_is_subclass(self):
         """Test that Amenity is a subclass of BaseModel"""
         amenity = Amenity()
@@ -104,3 +110,76 @@ class TestAmenity(unittest.TestCase):
         amenity = Amenity()
         string = "[Amenity] ({}) {}".format(amenity.id, amenity.__dict__)
         self.assertEqual(string, str(amenity))
+
+
+class TestPlaceAmenityAPI(unittest.TestCase):
+    """Tests for Place-Amenity API endpoints"""
+
+    def test_get_place_amenities(self):
+        """Test retrieving list of amenities of a place"""
+        # Create a place and an amenity
+        place = Place()
+        amenity = Amenity()
+        place.amenities.append(amenity)
+        storage.new(place)
+        storage.new(amenity)
+        storage.save()
+
+        # Request the amenities of the place
+        response = app_views.test_client().get(f'/places/{place.id}/amenities')
+
+        # Check if status code is 200
+        self.assertEqual(response.status_code, 200)
+
+        # Check if the response contains the amenity
+        data = response.json
+        self.assertTrue(isinstance(data, list))
+        self.assertEqual(len(data), 1)
+        self.assertEqual(data[0]['id'], amenity.id)
+
+    def test_delete_place_amenity(self):
+        """Test deleting an amenity from a place"""
+        # Create a place and an amenity
+        place = Place()
+        amenity = Amenity()
+        place.amenities.append(amenity)
+        storage.new(place)
+        storage.new(amenity)
+        storage.save()
+
+        # Delete the amenity from the place
+        response = (
+            app_views.test_client()
+            .delete(f'/places/{place.id}/amenities/{amenity.id}')
+        )
+
+        # Check if status code is 200
+        self.assertEqual(response.status_code, 200)
+
+        # Check if the amenity is removed from the place
+        self.assertNotIn(amenity, place.amenities)
+
+    def test_link_place_amenity(self):
+        """Test linking an amenity to a place"""
+        # Create a place and an amenity
+        place = Place()
+        amenity = Amenity()
+        storage.new(place)
+        storage.new(amenity)
+        storage.save()
+
+        # Link the amenity to the place
+        response = (
+            app_views.test_client()
+            .post(f'/places/{place.id}/amenities/{amenity.id}')
+        )
+
+        # Check if status code is 201
+        self.assertEqual(response.status_code, 201)
+
+        # Check if the amenity is linked to the place
+        self.assertIn(amenity, place.amenities)
+
+
+if __name__ == '__main__':
+    unittest.main()

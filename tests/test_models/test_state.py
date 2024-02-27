@@ -10,11 +10,16 @@ from models import state
 from models.base_model import BaseModel
 import pep8
 import unittest
+from flask import Flask
+from api.v1.views import app_views
+from unittest.mock import patch, PropertyMock
+
 State = state.State
 
 
 class TestStateDocs(unittest.TestCase):
     """Tests to check the documentation and style of State class"""
+
     @classmethod
     def setUpClass(cls):
         """Set up for the doc tests"""
@@ -59,6 +64,7 @@ class TestStateDocs(unittest.TestCase):
 
 class TestState(unittest.TestCase):
     """Test the State class"""
+
     def test_is_subclass(self):
         """Test that State is a subclass of BaseModel"""
         state = State()
@@ -103,3 +109,78 @@ class TestState(unittest.TestCase):
         state = State()
         string = "[State] ({}) {}".format(state.id, state.__dict__)
         self.assertEqual(string, str(state))
+
+
+class TestStateAPI(unittest.TestCase):
+    """Tests for State API endpoints"""
+
+    @patch('api.v1.views.states.storage.all')
+    def test_get_states(self, mock_storage_all):
+        """Test retrieving list of states"""
+        app = Flask(__name__)
+        app.register_blueprint(app_views)
+        with app.test_client() as client:
+            mock_storage_all.return_value = {}
+            response = client.get('/states')
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.json, [])
+
+    @patch('api.v1.views.states.storage.get')
+    def test_get_state(self, mock_storage_get):
+        """Test retrieving a state"""
+        app = Flask(__name__)
+        app.register_blueprint(app_views)
+        with app.test_client() as client:
+            mock_storage_get.return_value = None
+            response = client.get('/states/1')
+            self.assertEqual(response.status_code, 404)
+
+    def test_get_state_stats(self):
+        """Test retrieving state stats"""
+        app = Flask(__name__)
+        app.register_blueprint(app_views)
+        with app.test_client() as client:
+            response = client.get('/states/stats')
+            self.assertEqual(response.status_code, 200)
+            data = response.json
+            self.assertEqual(data['__class__'], 'State')
+
+    @patch('api.v1.views.states.storage.new')
+    @patch('api.v1.views.states.storage.save')
+    def test_create_state(self, mock_storage_save, mock_storage_new):
+        """Test creating a state"""
+        app = Flask(__name__)
+        app.register_blueprint(app_views)
+        with app.test_client() as client:
+            mock_storage_new.return_value = {}
+            mock_storage_save.return_value = {}
+            response = client.post('/states', json={'name': 'Test State'})
+            self.assertEqual(response.status_code, 201)
+            data = response.json
+            self.assertEqual(data['name'], 'Test State')
+
+    @patch('api.v1.views.states.storage.get')
+    @patch('api.v1.views.states.storage.save')
+    def test_update_state(self, mock_storage_save, mock_storage_get):
+        """Test updating a state"""
+        app = Flask(__name__)
+        app.register_blueprint(app_views)
+        with app.test_client() as client:
+            mock_storage_get.return_value = None
+            response = client.put('/states/1', json={'name': 'Updated State'})
+            self.assertEqual(response.status_code, 404)
+
+    @patch('api.v1.views.states.storage.get')
+    @patch('api.v1.views.states.storage.delete')
+    def test_delete_state(self, mock_storage_delete, mock_storage_get):
+        """Test deleting a state"""
+        app = Flask(__name__)
+        app.register_blueprint(app_views)
+        with app.test_client() as client:
+            mock_storage_get.return_value = None
+            response = client.delete('/states/1')
+            self.assertEqual(response.status_code, 404)
+
+
+if __name__ == '__main__':
+    unittest.main()

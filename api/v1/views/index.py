@@ -7,6 +7,7 @@ from flask import jsonify
 from api.v1.views import app_views
 from models import storage
 
+
 @app_views.route('/stats', methods=['GET'])
 def get_stats():
     """Get statistics about the number of objects by type"""
